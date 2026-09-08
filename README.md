@@ -72,6 +72,26 @@ A minimal `httpx`-based implementation is used rather than the reference MCP Pyt
 - Distributed on PyPI as **`mcphost`**. If that name is ever unavailable at publish time, the fallback is **`mcphost-client`** (the import name stays `mcphost` either way if PyPI allows it, or `mcphost_client` if it does not — check the package actually installed with `pip show`).
 - `uv build` produces a wheel; `scripts/publish.sh` gates the real-PyPI upload behind a `PUBLISH-OK` marker file or a truthy `PUBLISH_OK` environment variable (see `src/mcphost/publish_gate.py`). Absent that marker, publishing targets TestPyPI only.
 
+## Acceptance tests
+
+Each PRD acceptance criterion (`PRD-mcphost-python-client.md`) pairs with an offline pytest node run against `tests/fakeserver.py`:
+
+| AC | criterion | test node id |
+|---|---|---|
+| 1 | `signup --json` prints the fake's key; `initialize.clientInfo.name == "mcphost-python"` | `tests/test_acceptance.py::test_ac_1` |
+| 2 | `test spec.yaml` then `publish spec.yaml` forward the spec verbatim to `host.tool_test` then `host.tool_publish` | `tests/test_acceptance.py::test_ac_2` |
+| 3 | `call my.tool '{"a":1}' --json` prints the fake's `tools/call` result unchanged, incl. `result.payload` | `tests/test_acceptance.py::test_ac_3` |
+| 4 | a structured server error is printed as JSON, unreworded, non-zero exit | `tests/test_acceptance.py::test_ac_4` |
+| 5 | `uv build` wheel metadata description + project URLs match the shared strings | `tests/test_acceptance.py::test_ac_5` |
+| 6 | no `PUBLISH-OK` → publish targets TestPyPI/dry-run, never real PyPI | `tests/test_acceptance.py::test_ac_6`, `tests/test_publish_gate.py` |
+| 7 (P1) | `MCPHOST_LIVE_TEST=1` runs signup→test→publish→call against real mcphost.dev, prints four timings | `tests/test_live_smoke.py::test_ac_7_live_signup_test_publish_call_against_mcphost_dev` (skipped by default — network + real tenant, opt-in only) |
+
+Two extra intent-card ACs, not in the PRD's numbered list but derived during intake, are covered the same way: `test_ac_8` (exact `clientInfo` shape) and `test_ac_9` (every `--json` command matches its library method's return shape).
+
+```bash
+uv run pytest -k "test_ac"     # just the AC-tagged suite: 8 passed, 1 skipped
+```
+
 ## Development
 
 ```bash
