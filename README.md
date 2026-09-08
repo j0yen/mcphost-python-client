@@ -78,15 +78,15 @@ Each PRD acceptance criterion (`PRD-mcphost-python-client.md`) pairs with an off
 
 | AC | criterion | test node id |
 |---|---|---|
-| 1 | `signup --json` prints the fake's key; `initialize.clientInfo.name == "mcphost-python"` | `tests/test_acceptance.py::test_ac_1` |
-| 2 | `test spec.yaml` then `publish spec.yaml` forward the spec verbatim to `host.tool_test` then `host.tool_publish` | `tests/test_acceptance.py::test_ac_2` |
-| 3 | `call my.tool '{"a":1}' --json` prints the fake's `tools/call` result unchanged, incl. `result.payload` | `tests/test_acceptance.py::test_ac_3` |
-| 4 | a structured server error is printed as JSON, unreworded, non-zero exit | `tests/test_acceptance.py::test_ac_4` |
-| 5 | `uv build` wheel metadata description + project URLs match the shared strings | `tests/test_acceptance.py::test_ac_5` |
-| 6 | no `PUBLISH-OK` → publish targets TestPyPI/dry-run, never real PyPI | `tests/test_acceptance.py::test_ac_6`, `tests/test_publish_gate.py` |
+| 1 | `signup --json` prints the fake's key; `initialize.clientInfo.name == "mcphost-python"` | `tests/test_acceptance.py::test_ac_1_signup_prints_key_and_clientinfo` |
+| 2 | `test spec.yaml` then `publish spec.yaml` forward the spec verbatim to `host.tool_test` then `host.tool_publish` | `tests/test_acceptance.py::test_ac_2_test_then_publish_forwards_spec_verbatim` |
+| 3 | `call my.tool '{"a":1}' --json` prints the fake's `tools/call` result unchanged, incl. `result.payload` | `tests/test_acceptance.py::test_ac_3_call_result_unchanged` |
+| 4 | a structured server error is printed as JSON, unreworded, non-zero exit | `tests/test_acceptance.py::test_ac_4_structured_error_unreworded` |
+| 5 | `uv build` wheel metadata description + project URLs match the shared strings | `tests/test_acceptance.py::test_ac_5_wheel_metadata_matches_shared_strings` |
+| 6 | no `PUBLISH-OK` → publish targets TestPyPI/dry-run, never real PyPI | `tests/test_acceptance.py::test_ac_6_no_publish_ok_targets_testpypi`, `tests/test_publish_gate.py` |
 | 7 (P1) | `MCPHOST_LIVE_TEST=1` runs signup→test→publish→call against real mcphost.dev, prints four timings | `tests/test_live_smoke.py::test_ac_7_live_signup_test_publish_call_against_mcphost_dev` (skipped by default — network + real tenant, opt-in only) |
 
-Two extra intent-card ACs, not in the PRD's numbered list but derived during intake, are covered the same way: `test_ac_8` (exact `clientInfo` shape) and `test_ac_9` (every `--json` command matches its library method's return shape).
+Two extra intent-card ACs, not in the PRD's numbered list but derived during intake, are covered the same way: `test_ac_8_clientinfo_shape_exact` (exact `clientInfo` shape) and `test_ac_9_json_output_matches_library_return_shape` (every `--json` command matches its library method's return shape).
 
 ```bash
 uv run pytest -k "test_ac"     # just the AC-tagged suite: 8 passed, 1 skipped

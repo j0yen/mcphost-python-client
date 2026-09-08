@@ -21,7 +21,9 @@ import mcphost
 from mcphost.cli import main
 
 
-def test_ac_1(fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]) -> None:
+def test_ac_1_signup_prints_key_and_clientinfo(
+    fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]
+) -> None:
     # AC-1 [MUST]: Given a fake MCP server fixture, when `mcphost signup "x"
     # --json` runs against it, then the CLI prints the key the fake server
     # returned, and the fake server's captured `initialize` request has
@@ -47,7 +49,7 @@ def test_ac_1(fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]) -> Non
     assert init_request["params"]["clientInfo"]["name"] == "mcphost-python"
 
 
-def test_ac_2(
+def test_ac_2_test_then_publish_forwards_spec_verbatim(
     fake_host: FakeMcpHost, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     # AC-2 [MUST]: Given a valid http-kind spec file, when `mcphost test
@@ -96,7 +98,9 @@ def test_ac_2(
     assert test_request_order < publish_request_order
 
 
-def test_ac_3(fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]) -> None:
+def test_ac_3_call_result_unchanged(
+    fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]
+) -> None:
     # AC-3 [MUST]: Given a published tool, when `mcphost call my.tool
     # '{"a":1}' --json` runs, then the printed JSON equals the fake's
     # `tools/call` result unchanged, including a nested `payload` key.
@@ -124,7 +128,9 @@ def test_ac_3(fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]) -> Non
     }
 
 
-def test_ac_4(fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]) -> None:
+def test_ac_4_structured_error_unreworded(
+    fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]
+) -> None:
     # AC-4 [MUST]: Given a server error object, when any command receives
     # it, then the CLI prints the object as JSON and exits non-zero, without
     # rewording it.
@@ -142,7 +148,7 @@ def test_ac_4(fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]) -> Non
     assert printed["data"]["error_code"] == "tenant_disabled"
 
 
-def test_ac_5() -> None:
+def test_ac_5_wheel_metadata_matches_shared_strings() -> None:
     # AC-5 [MUST]: Given `uv build`, when it runs, then a wheel is produced
     # whose metadata description equals the shared description string and
     # whose project URLs include mcphost.dev. Building is exercised by the
@@ -163,7 +169,7 @@ def test_ac_5() -> None:
     assert any("mcphost.dev" in url for url in urls.values())
 
 
-def test_ac_6() -> None:
+def test_ac_6_no_publish_ok_targets_testpypi() -> None:
     # AC-6 [MUST]: Given no PUBLISH-OK, when the publish step runs, then it
     # uploads to TestPyPI (or dry-runs) and never to PyPI. See
     # test_publish_gate.py for the exhaustive decision-table coverage; this
@@ -174,7 +180,7 @@ def test_ac_6() -> None:
     assert target is PublishTarget.TEST_PYPI
 
 
-def test_ac_8(fake_host: FakeMcpHost) -> None:
+def test_ac_8_clientinfo_shape_exact(fake_host: FakeMcpHost) -> None:
     # AC-8 [MUST]: Given the library's Client, when it performs the MCP
     # initialize handshake, then params.clientInfo is exactly
     # {"name": "mcphost-python", "version": <installed package version>}.
@@ -190,7 +196,9 @@ def test_ac_8(fake_host: FakeMcpHost) -> None:
     }
 
 
-def test_ac_9(fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]) -> None:
+def test_ac_9_json_output_matches_library_return_shape(
+    fake_host: FakeMcpHost, capsys: pytest.CaptureFixture[str]
+) -> None:
     # AC-9 [MUST]: Given every CLI command, when invoked with --json, then
     # machine-readable JSON is printed matching the library method's return
     # value structure-for-structure.
