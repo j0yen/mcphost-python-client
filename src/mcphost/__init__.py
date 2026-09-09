@@ -15,6 +15,22 @@ from __future__ import annotations
 
 from ._version import __version__
 from .client import Client
-from .errors import MCPHostError
+from .errors import (
+    ArgsInvalidError,
+    CapacityError,
+    MCPHostError,
+    RateLimitedError,
+    SpecInvalidError,
+    ToolBuildingError,
+)
 
-__all__ = ["Client", "MCPHostError", "__version__"]
+__all__ = [
+    "ArgsInvalidError",
+    "CapacityError",
+    "Client",
+    "MCPHostError",
+    "RateLimitedError",
+    "SpecInvalidError",
+    "ToolBuildingError",
+    "__version__",
+]

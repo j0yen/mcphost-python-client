@@ -44,20 +44,42 @@ Every command accepts `--json` (machine-readable stdout), `--base-url` (default 
 
 | command | maps to |
 |---|---|
-| `mcphost signup <name> [--save-key]` | `signup` |
+| `mcphost signup <name> [--no-save]` | `signup` |
+| `mcphost logout` | (local only — removes the saved key) |
 | `mcphost test <spec.yaml>` | `host.tool_test` |
 | `mcphost publish <spec.yaml>` | `host.tool_publish` |
 | `mcphost call <tool> '<json-args>'` | `host.tool_call` |
 | `mcphost list` | `host.tool_list` |
 | `mcphost usage [--window 24h]` | `host.usage` |
+| `mcphost logs <tool> [--limit N]` | `host.tool_logs` |
+| `mcphost remove <tool>` | `host.tool_remove` |
+| `mcphost secret set <name> <value>` / `secret list` | `host.secret_set` / `host.secret_list` |
+| `mcphost whoami` | `host.whoami` |
+| `mcphost quickstart <kind>` | `host.quickstart` |
+| `mcphost billing status` / `billing checkout [--plan NAME]` | `billing.status` / `billing.checkout` |
 
-`signup --save-key` stores the returned key at `~/.config/mcphost/key` (mode `0600`); this is off by default, and `mcphost` never reads that file unless a command is run with `--use-saved-key` and no `--key`/`$MCPHOST_KEY` is set. Signup itself never touches disk.
+**The key follows you by default.** `signup` stores the returned key at `~/.config/mcphost/credentials` (mode `0600`), keyed by endpoint origin so the same file serves several mcphost hosts. Every later command against that same `--base-url` reads it automatically — no `--save-key`/`--use-saved-key` flags needed. `--key`/`$MCPHOST_KEY` still override the saved key; `--no-save` on `signup` opts out of persisting; `mcphost logout` removes the saved entry for the current `--base-url`. (`--save-key`/`--use-saved-key` are kept as no-op aliases for this release only, for anyone's scripts still passing them.)
+
+A python-kind tool's environment can still be building on its first call after publish; `mcphost call`/`Client.tool_call` wait that out automatically (see below) rather than failing immediately.
 
 ## Error handling contract
 
-A server-side rejection is a JSON-RPC error whose `error.data.error_code` names the failure (see mcphost's own `AppError` taxonomy). This client's library methods raise `mcphost.MCPHostError`, whose `.error` attribute is that JSON-RPC error object exactly as received — unmodified, unreworded, key order preserved. `.error_code` is a convenience accessor for `.error["data"]["error_code"]`.
+A server-side rejection is a JSON-RPC error whose `error.data.error_code` names the failure (see mcphost's own `AppError` taxonomy). This client's library methods raise `mcphost.MCPHostError`, whose `.error` attribute is that JSON-RPC error object exactly as received — unmodified, unreworded, key order preserved. `.error_code` is a convenience accessor for `.error["data"]["error_code"]`; `.data` and `.docs` cover the rest of that object, and `.retry_after_ms` reads `.data["retry_after_ms"]` when the host sent one.
+
+Five subclasses key off `error_code` so a caller can `except` a specific failure without string-matching: `ToolBuildingError` (`tool_building`), `ArgsInvalidError` (`args_invalid`), `SpecInvalidError` (`invalid_spec`), `CapacityError` (`capacity`), `RateLimitedError` (`rate_limited`). Every one of them is still an `MCPHostError`, so code written against 0.1.0 that only ever caught the base class keeps working unchanged.
 
 The CLI never reformats this: on an `MCPHostError`, it prints `json.dumps(exc.error, indent=2)` to stdout and exits non-zero, in every mode (`--json` or not) — the error itself already is the structured, machine-readable form.
+
+## Waiting out a build
+
+`Client.tool_call` no longer raises on the first `tool_building` state. A python tool's environment can take a few hundred milliseconds to seconds to come up after `publish` (or after being idle); `tool_call` retries, sleeping the host's own `retry_after_ms` hint between attempts (250ms if the host sends none), until it either gets a real result or its `build_wait_s` budget (a `Client` constructor argument, default 30s) runs out — at which point it raises `ToolBuildingError`, whose `.retry_after_ms` is the last hint seen.
+
+```python
+client = mcphost.Client(build_wait_s=45)   # give a cold environment more room
+client.tool_call("my_python_tool", {})     # waits internally; no manual retry loop needed
+```
+
+`Client.wait_ready(name, timeout_s=30)` polls `host.tool_test` on an already-published tool until it stops reporting `building`, for a caller that wants to prewarm a tool ahead of its first real call rather than pay that wait inside `tool_call` itself. Unlike `tool_call`, it never raises on a timeout — it just returns whatever the last poll saw.
 
 ## Transport
 

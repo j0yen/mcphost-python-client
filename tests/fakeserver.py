@@ -27,12 +27,20 @@ class FakeMcpHost:
       `tools/call` whose `params.name == tool_name` (default: `{}`).
     - `.errors[tool_name]`: when set, that call returns this JSON-RPC
       `error` object instead of a result.
+    - `.set_building(tool_name, ...)`: that call returns a structured
+      `{"status": "building", "retry_after_ms": ...}` result some number of
+      times (or forever) before falling through to `.responses`/`.errors`
+      for the same tool name -- mirrors mcphost's own `building_result`
+      shape (~/wintermute/mcphost/src/kinds/python.rs), for exercising
+      `Client.tool_call`'s bounded wait (PRD-mcphost-python-client-fluidity)
+      without a network or a real sandbox.
     """
 
     def __init__(self) -> None:
         self.requests: list[dict[str, Any]] = []
         self.responses: dict[str, Any] = {}
         self.errors: dict[str, dict[str, Any]] = {}
+        self.building: dict[str, dict[str, Any]] = {}
         self._server = ThreadingHTTPServer(("127.0.0.1", 0), self._handler_factory())
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
 
@@ -78,6 +86,22 @@ class FakeMcpHost:
         if method == "tools/call":
             params = body.get("params", {})
             tool_name = params.get("name")
+            if tool_name in self.building:
+                state = self.building[tool_name]
+                remaining = state["remaining"]
+                if remaining is None or remaining > 0:
+                    if remaining is not None:
+                        state["remaining"] = remaining - 1
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "result": {
+                            "structuredContent": {
+                                "status": "building",
+                                "retry_after_ms": state["retry_after_ms"],
+                            }
+                        },
+                    }
             if tool_name in self.errors:
                 return {"jsonrpc": "2.0", "id": request_id, "error": self.errors[tool_name]}
             result_value = self.responses.get(tool_name, {})
@@ -110,6 +134,17 @@ class FakeMcpHost:
 
     def __exit__(self, *exc: object) -> None:
         self.stop()
+
+    def set_building(
+        self, tool_name: str, *, times: int | None, retry_after_ms: int = 250
+    ) -> None:
+        """Make the next call(s) to `tool_name` return a `building` result.
+
+        `times=None` means "forever" (until the test ends); an int counts
+        down, after which calls fall through to `.responses`/`.errors` for
+        the same tool name.
+        """
+        self.building[tool_name] = {"remaining": times, "retry_after_ms": retry_after_ms}
 
     # -- assertion helpers --------------------------------------------------
 

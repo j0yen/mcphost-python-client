@@ -8,4 +8,4 @@ string for the MCP ``clientInfo`` handshake; ``__init__.py`` needs
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

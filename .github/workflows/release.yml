@@ -1,0 +1,43 @@
+name: release
+# PRD-mcphost-python-client-fluidity requirement 5 / AC7: `build` runs on
+# every push and can be dry-run any time via workflow_dispatch, proving the
+# wheel builds without needing a real tag; `publish` runs only on a `v*` tag
+# and uses PyPI trusted publishing (OIDC via `id-token: write`), so no PyPI
+# token is stored in this repo. Trusted publishing itself is an operator
+# step under the PyPI `j0yen` account project settings (still pending as of
+# this PRD -- see CHANGELOG.md 0.2.0 and the PRD's open question); until
+# that's done, `publish` will fail at the auth step on a real tag push, but
+# `build` already proves the wheel is publishable.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
